@@ -268,13 +268,12 @@ class TestRedfishSystem(RedfishTestCase):
         physical_server = mock.Mock()
         physical_server.ems_ref = "/redfish/v1/Systems/System-1-2-1-1"
         requested_stats = ["cores_capacity", "memory_capacity",
-                           "num_network_devices",
-                           #  "num_storage_devices"
+                           "num_network_devices", "num_storage_devices"
                            ]
         requested_inventory = ["power_state"]
         assert (rf.server_stats(physical_server, requested_stats) == {
                 "cores_capacity": 20, "memory_capacity": 32768,
-                "num_network_devices": 0})
+                "num_network_devices": 0, "num_storage_devices": 0})
         assert (rf.server_inventory(physical_server, requested_inventory) == {
                 "power_state": "on"})
 
@@ -475,6 +474,56 @@ class TestRedfishServer(RedfishTestCase):
         })
         rf_server = rf.get_server("/redfish/v1/Systems/1")
         assert rf_server.num_network_devices == num_netinfs
+
+    def test_server_num_storage_devices(self):
+        rf = self.mock_redfish_system(self.mock_connector, data={
+            "/redfish/v1/Systems/1": {
+                "@odata.id": "/redfish/v1/Systems/1",
+                "Id": "1",
+                "Manufacturer": "Dell Inc.",
+                "Name": "System",
+                "Storage": "/redfish/v1/Systems/1/Storage",
+            },
+            "/redfish/v1/Systems/1/Storage": {
+                "@odata.id": "/redfish/v1/Systems1/Storage",
+                "Description": "A Collection of Storage resource instances.",
+                "Members": [
+                    {
+                        "@odata.id": "/redfish/v1/Systems/1/Storage/RAID_Slot1"
+                    },
+                    {
+                        "@odata.id": "/redfish/v1/Systems/1/Storage/M.2_Slot8"
+                    }
+                ],
+                "Members@odata.count": 2
+            },
+            "/redfish/v1/Systems/1/Storage/RAID_Slot1": {
+                "@odata.id": "/redfish/v1/Systems/1/Storage/RAID_Slot1",
+                "StorageControllers": [
+                    {
+                        "@odata.id": "/redfish/v1/Systems/1/Storage/RAID_Slot1"
+                                     "#/StorageControllers/0",
+                        "FirmwareVersion": "50.3.0-1075",
+                        "Manufacturer": "Contoso",
+                        "Model": "SAS3508+SAS35x36",
+                        "Name": "RAID Storage Adapter"
+                    }
+                ],
+                "StorageControllers@odata.count": 1
+            },
+            "/redfish/v1/Systems/1/Storage/M.2_Slot8": {
+                "@odata.id": "/redfish/v1/Systems/1/Storage/M.2_Slot8/",
+                "Id": "M.2_Slot8",
+                "Name": "M.2 Storage",
+                "Status": {
+                    "Health": "OK",
+                    "HealthRollup": "OK",
+                    "State": "Enabled"
+                }
+            }
+        })
+        rf_server = rf.get_server("/redfish/v1/Systems/1")
+        assert rf_server.num_storage_devices == 1
 
 
 class TestRedfishChassis(RedfishTestCase):
