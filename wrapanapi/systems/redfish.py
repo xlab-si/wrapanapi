@@ -116,6 +116,14 @@ class RedfishServer(Server, RedfishResource):
         """Reurn the product name of the server"""
         return self.raw.Name
 
+    @property
+    def num_network_devices(self):
+        """Return the number of network devices attached to the server"""
+        if "NetworkInterfaces" not in self.raw:
+            return 0
+        nifs = self.system.find(self.raw.NetworkInterfaces)
+        return len(nifs.Members)
+
     def _get_state(self):
         """
         Return ServerState object representing the server's current state.
@@ -176,6 +184,7 @@ class RedfishSystem(System):
     _server_stats_available = {
         'cores_capacity': lambda server: server.server_cores,
         'memory_capacity': lambda server: server.server_memory,
+        'num_network_devices': lambda server: server.num_network_devices,
     }
 
     _server_inventory_available = {

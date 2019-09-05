@@ -268,11 +268,13 @@ class TestRedfishSystem(RedfishTestCase):
         physical_server = mock.Mock()
         physical_server.ems_ref = "/redfish/v1/Systems/System-1-2-1-1"
         requested_stats = ["cores_capacity", "memory_capacity",
-                           #  "num_network_devices", "num_storage_devices"
+                           "num_network_devices",
+                           #  "num_storage_devices"
                            ]
         requested_inventory = ["power_state"]
         assert (rf.server_stats(physical_server, requested_stats) == {
-                "cores_capacity": 20, "memory_capacity": 32768})
+                "cores_capacity": 20, "memory_capacity": 32768,
+                "num_network_devices": 0})
         assert (rf.server_inventory(physical_server, requested_inventory) == {
                 "power_state": "on"})
 
@@ -441,6 +443,38 @@ class TestRedfishServer(RedfishTestCase):
         })
         rf_server = rf.get_server("/redfish/v1/Systems/System-1-2-1-1")
         assert rf_server.name == "Dell Inc. System"
+
+    @pytest.mark.parametrize("num_netinfs,netinfs", [
+        (0, []),
+        (1, [
+            {"@odata.id": "/redfish/v1/Systems/1/NetworkInterfaces/1"}
+        ]),
+        (4, [
+            {"@odata.id": "/redfish/v1/Systems/1/NetworkInterfaces/1"},
+            {"@odata.id": "/redfish/v1/Systems/1/NetworkInterfaces/2"},
+            {"@odata.id": "/redfish/v1/Systems/1/NetworkInterfaces/3"},
+            {"@odata.id": "/redfish/v1/Systems/1/NetworkInterfaces/4"}
+        ]),
+    ])
+    def test_num_network_devices(self, num_netinfs, netinfs):
+        rf = self.mock_redfish_system(self.mock_connector, data={
+            "/redfish/v1/Systems/1": {
+                "@odata.id": "/redfish/v1/Systems/1",
+                "Id": "1",
+                "Manufacturer": "Dell Inc.",
+                "NetworkInterfaces": "/redfish/v1/Systems/1/NetworkInterfaces",
+                "Name": "System",
+            },
+            "/redfish/v1/Systems/1/NetworkInterfaces": {
+                "@odata.id": "/redfish/v1/Systems/1/NetworkInterfaces/",
+                "Description": "A Collection of NetworkInterface resource instances.",
+                "Members": netinfs,
+                "Members@odata.count": 1,
+                "Name": "NetworkInterfaceCollection"
+            }
+        })
+        rf_server = rf.get_server("/redfish/v1/Systems/1")
+        assert rf_server.num_network_devices == num_netinfs
 
 
 class TestRedfishChassis(RedfishTestCase):
