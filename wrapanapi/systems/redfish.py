@@ -135,6 +135,22 @@ class RedfishServer(Server, RedfishResource):
                     n += len(storage.StorageControllers)
         return n
 
+    @property
+    def firmwares(self):
+        """Return a dictionary of firmwares of the server"""
+        firmwares = []
+        update_service = self.system.find("/redfish/v1/UpdateService")
+        if "FirmwareInventory" in update_service:
+            for f in update_service.FirmwareInventory.Members:
+                firmware = self.system.find(f["@odata.id"])
+                if ({"@odata.id": self._odata_id} in firmware.raw.get(
+                        "RelatedItem", [])):
+                    firmwares.append({
+                        "name": firmware.Name,
+                        "version": firmware.Version
+                    })
+
+        return firmwares
 
     def _get_state(self):
         """

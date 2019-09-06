@@ -402,6 +402,7 @@ class TestRedfishServer(RedfishTestCase):
         assert not rf_server.is_powering_off
         assert rf_server.machine_type == "x86-64"
         assert rf_server.product_name == "System"
+        assert rf_server.firmwares == []
 
     def test_server_power_states(self):
         # string,
@@ -524,6 +525,93 @@ class TestRedfishServer(RedfishTestCase):
         })
         rf_server = rf.get_server("/redfish/v1/Systems/1")
         assert rf_server.num_storage_devices == 1
+
+    @pytest.mark.parametrize("url,firmwares", [
+        ("/redfish/v1/Systems/1", [{"name": "Bios", "version": "1.20"}]),
+        ("/redfish/v1/Systems/2", [{"name": "Bios", "version": "1.20"}]),
+        ("/redfish/v1/Systems/3", [{"name": "UEFI", "version": "2.50.4a"}]),
+        ("/redfish/v1/Systems/4", []),
+    ])
+    def test_firmwares(self, url, firmwares):
+        rf = self.mock_redfish_system(self.mock_connector, data={
+            "/redfish/v1": {
+                "UpdateService": {
+                    "@odata.id": "/redfish/v1/UpdateService"
+                }
+            },
+            "/redfish/v1/UpdateService": {
+                "@odata.id": "/redfish/v1/UpdateService",
+                "FirmwareInventory": {
+                    "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory"
+                },
+                "Id": "UpdateService",
+                "Name": "Update Service"
+            },
+            "/redfish/v1/UpdateService/FirmwareInventory": {
+                "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/",
+                "Members": [
+                    {
+                        "@odata.id":
+                            "/redfish/v1/UpdateService/FirmwareInventory/Bios"
+                    },
+                    {
+                        "@odata.id":
+                            "/redfish/v1/UpdateService/FirmwareInventory/NIC-drvs"
+                    },
+                    {
+                        "@odata.id":
+                            "/redfish/v1/UpdateService/FirmwareInventory/UEFI"
+                    }
+                ],
+                "Members@odata.count": 3,
+                "Name": "SoftwareInventoryCollection"
+            },
+            "/redfish/v1/UpdateService/FirmwareInventory/Bios": {
+                "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/Bios",
+                "Description": "The information on Bios firmware.",
+                "Id": "Bios",
+                "Name": "Bios",
+                "RelatedItem": [
+                    {
+                        "@odata.id": "/redfish/v1/Systems/1"
+                    },
+                    {
+                        "@odata.id": "/redfish/v1/Systems/2"
+                    }
+                ],
+                "RelatedItem@odata.count": 2,
+                "SoftwareId": "IVE1",
+                "Version": "1.20"
+            },
+            "/redfish/v1/UpdateService/FirmwareInventory/NIC-drvs": {
+                "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/NIC-drvs",
+                "Description": "The information on NIC drivers.",
+                "Id": "NIC-drvs",
+                "Name": "NIC-drvs",
+                "SoftwareId": "NIC-45-HJK",
+                "Version": "5.32.5"
+            },
+            "/redfish/v1/UpdateService/FirmwareInventory/UEFI": {
+                "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/UEFI",
+                "Description": "The information on UEFI.",
+                "Id": "UEFI",
+                "Name": "UEFI",
+                "RelatedItem": [
+                    {
+                        "@odata.id": "/redfish/v1/Systems/3"
+                    }
+                ],
+                "RelatedItem@odata.count": 1,
+                "SoftwareId": "MyGTH-76",
+                "Version": "2.50.4a"
+            },
+            "/redfish/v1/Systems/1": {"@odata.id": "/redfish/v1/Systems/1"},
+            "/redfish/v1/Systems/2": {"@odata.id": "/redfish/v1/Systems/2"},
+            "/redfish/v1/Systems/3": {"@odata.id": "/redfish/v1/Systems/3"},
+            "/redfish/v1/Systems/4": {"@odata.id": "/redfish/v1/Systems/4"},
+        })
+        rf_server = rf.get_server(url)
+        assert rf_server.firmwares == firmwares
 
 
 class TestRedfishChassis(RedfishTestCase):
